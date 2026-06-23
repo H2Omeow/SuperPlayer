@@ -1,60 +1,63 @@
-function setSType(t, btn) {
-  sType = t;
+// ==================== 搜索类型切换 ====================
+window.setSType = function(t, btn) {
+  window.sType = t;
   document.querySelectorAll(".s-tabs button").forEach(function(b) { b.classList.remove("active"); });
   btn.classList.add("active");
   var labels = {1:"搜索歌曲...",100:"搜索歌手...",10:"搜索专辑..."};
   document.getElementById("sIpt").placeholder = labels[t] || "搜索...";
-}
+};
 
-// 自动获取游客 Cookie 机制
-function initGuestCookie() {
-  if (!localStorage.getItem(ncKey) && !localStorage.getItem(ncGuestKey)) {
-    fAPI('/register/anonimous').then(function(d) {
+// ==================== 自动获取游客 Cookie ====================
+window.initGuestCookie = function() {
+  if (!localStorage.getItem(window.ncKey) && !localStorage.getItem(window.ncGuestKey)) {
+    window.fAPI('/register/anonimous').then(function(d) {
       if (d.code === 200 && d.cookie) {
-        localStorage.setItem(ncGuestKey, d.cookie);
+        localStorage.setItem(window.ncGuestKey, d.cookie);
       }
     }).catch(function(){});
   }
-}
+};
 
-function loadCookies() {
-  var nc = localStorage.getItem(ncKey) || '';
-  var bl = localStorage.getItem(blKey) || '';
+// ==================== Cookie 管理 ====================
+window.loadCookies = function() {
+  var nc = localStorage.getItem(window.ncKey) || '';
+  var bl = localStorage.getItem(window.blKey) || '';
   if (document.getElementById('ncCookie')) document.getElementById('ncCookie').value = nc;
   if (document.getElementById('blCookie')) document.getElementById('blCookie').value = bl;
   if (nc) document.getElementById('ncSaved').style.display = 'inline';
   if (bl) document.getElementById('blSaved').style.display = 'inline';
-}
+};
 
-function saveCookie(type) {
+window.saveCookie = function(type) {
   var ipt = type === 'nc' ? document.getElementById('ncCookie') : document.getElementById('blCookie');
   var saved = type === 'nc' ? document.getElementById('ncSaved') : document.getElementById('blSaved');
-  var key = type === 'nc' ? ncKey : blKey;
+  var key = type === 'nc' ? window.ncKey : window.blKey;
   if (ipt) {
     localStorage.setItem(key, ipt.value);
     saved.style.display = ipt.value ? 'inline' : 'none';
   }
-}
+};
 
-function getNCookie() { return localStorage.getItem(ncKey) || localStorage.getItem(ncGuestKey) || ''; }
-function getBCookie() { return localStorage.getItem(blKey) || ''; }
+window.getNCookie = function() { return localStorage.getItem(window.ncKey) || localStorage.getItem(window.ncGuestKey) || ''; };
+window.getBCookie = function() { return localStorage.getItem(window.blKey) || ''; };
 
-function qrLogin() {
+// ==================== 扫码登录 ====================
+window.qrLogin = function() {
   var modal = document.getElementById('qrModal');
   var img = document.getElementById('qrImg');
   var msg = document.getElementById('qrMsg');
   modal.classList.add('show');
   img.src = '';
   msg.textContent = '正在获取二维码...';
-  fAPI('/login/qr/key?timestamp=' + Date.now()).then(function(d) {
+  window.fAPI('/login/qr/key?timestamp=' + Date.now()).then(function(d) {
     if (d.code === 200 && d.data && d.data.unikey) {
       var key = d.data.unikey;
       msg.textContent = '正在生成二维码...';
-      fAPI('/login/qr/create?key=' + key + '&qrimg=true&timestamp=' + Date.now()).then(function(qd) {
+      window.fAPI('/login/qr/create?key=' + key + '&qrimg=true&timestamp=' + Date.now()).then(function(qd) {
         if (qd.code === 200 && qd.data && qd.data.qrimg) {
           img.src = qd.data.qrimg;
           msg.textContent = '请使用网易云音乐 App 扫码';
-          pollQR(key);
+          window.pollQR(key);
         } else {
           msg.textContent = '二维码生成失败';
         }
@@ -67,152 +70,154 @@ function qrLogin() {
   }).catch(function() {
     msg.textContent = '获取二维码失败，请检查 API';
   });
-}
+};
 
-var qrTimer = null;
-function pollQR(key) {
-  if (qrTimer) clearTimeout(qrTimer);
-  fAPI('/login/qr/check?key=' + key + '&timestamp=' + Date.now()).then(function(d) {
+window.pollQR = function(key) {
+  if (window.qrTimer) clearTimeout(window.qrTimer);
+  window.fAPI('/login/qr/check?key=' + key + '&timestamp=' + Date.now()).then(function(d) {
     if (d.code === 803) {
       var cookie = d.cookie || '';
       document.getElementById('ncCookie').value = cookie;
-      localStorage.setItem(ncKey, cookie);
+      localStorage.setItem(window.ncKey, cookie);
       document.getElementById('ncSaved').style.display = 'inline';
       document.getElementById('qrMsg').textContent = '登录成功！Cookie 已保存';
       setTimeout(function() { document.getElementById('qrModal').classList.remove('show'); }, 1500);
     } else if (d.code === 802) {
       document.getElementById('qrMsg').textContent = '已扫码，确认登录中...';
-      qrTimer = setTimeout(function() { pollQR(key); }, 1500);
+      window.qrTimer = setTimeout(function() { window.pollQR(key); }, 1500);
     } else if (d.code === 801) {
       document.getElementById('qrMsg').textContent = '请使用网易云音乐 App 扫码';
-      qrTimer = setTimeout(function() { pollQR(key); }, 2000);
+      window.qrTimer = setTimeout(function() { window.pollQR(key); }, 2000);
     } else if (d.code === 800) {
       document.getElementById('qrMsg').textContent = '二维码已过期，请重新获取';
     } else {
-      qrTimer = setTimeout(function() { pollQR(key); }, 2000);
+      window.qrTimer = setTimeout(function() { window.pollQR(key); }, 2000);
     }
   }).catch(function() {
-    qrTimer = setTimeout(function() { pollQR(key); }, 3000);
+    window.qrTimer = setTimeout(function() { window.pollQR(key); }, 3000);
   });
-}
+};
 
-function closeQR() {
-  if (qrTimer) { clearTimeout(qrTimer); qrTimer = null; }
+window.closeQR = function() {
+  if (window.qrTimer) { clearTimeout(window.qrTimer); window.qrTimer = null; }
   document.getElementById('qrModal').classList.remove('show');
-}
+};
 
-function sw(v) {
+// ==================== 导航切换 ====================
+window.sw = function(v) {
   document.querySelectorAll('[data-v]').forEach(function(e) { e.classList.remove('active'); });
   document.querySelectorAll('[data-v="' + v + '"]').forEach(function(e) { e.classList.add('active'); });
   document.querySelectorAll('.pg').forEach(function(e) { e.classList.remove('active'); });
-  
+
   var targetPg = document.getElementById('pg' + v.charAt(0).toUpperCase() + v.slice(1));
   if (targetPg) targetPg.classList.add('active');
-  
+
   var pgTitle = document.getElementById('pgTitle');
   if (pgTitle) {
     pgTitle.textContent = {home:'主页',music:'网易云音乐',bilibili:'哔哩哔哩',mine:'我的'}[v] || '主页';
   }
-  if (v === 'music') loadRec(); 
-  if (v === 'bilibili') loadBili();
-  if (v === 'mine') setMineTab('history', document.querySelector('#mineTabs button')); 
-}
+  if (v === 'music') window.loadRec();
+  if (v === 'bilibili') window.loadBili();
+  if (v === 'mine') window.setMineTab('history', document.querySelector('#mineTabs button'));
+};
 
-var logs = [
+// ==================== 更新日志 ====================
+window.logs = [
   {d:'2026-06-22',t:'全体系大更新：新增游客自动认证（防错误）、自定义多层歌单系统、我的界面历史记录；卡片可分离式一键秒插播及收藏。'},
   {d:'2026-06-20',t:'全屏纯净穿透：全屏模式下屏蔽背景组件，直达壁纸；同时开放全屏界面的独立模糊效果与透明度参数调节。'},
-  {d:'2026-06-20',t:'自适应最优比例裁剪：彻底重构壁纸轮询体系，直接计算与用户视口的“最相近比例差”，并行筛选最佳壁纸无缝呈现。'}
+  {d:'2026-06-20',t:'自适应最优比例裁剪：彻底重构壁纸轮询体系，直接计算与用户视口的"最相近比例差"，并行筛选最佳壁纸无缝呈现。'}
 ];
 
-function shCL() {
-  document.getElementById('clList').innerHTML = logs.map(function(i) {
+window.shCL = function() {
+  document.getElementById('clList').innerHTML = window.logs.map(function(i) {
     return '<div class="li"><div class="ld">' + i.d + '</div><div class="lt">' + i.t + '</div></div>';
   }).join('');
   document.getElementById('clModal').classList.add('show');
-}
+};
 
-function hdCL() {
+window.hdCL = function() {
   document.getElementById('clModal').classList.remove('show');
-}
+};
 
-// 统一封装大卡片渲染：右侧动作区采用物理阻止冒泡，彻底避免 Firefox 等浏览器全局 Event 丢失崩溃 Bug
-function buildSongCardHtml(s) {
+// ==================== 歌曲卡片渲染 ====================
+window.buildSongCardHtml = function(s) {
   var sid = s.id, nm = s.nm, ar = s.ar, pc = s.pc;
   return '<div class="s-item">'
-    + '<div style="display:flex;flex:1;min-width:0;align-items:center;gap:12px;" onclick="pSongNow(' + sid + ',\'' + escA(nm) + '\',\'' + escA(ar) + '\',\'' + escA(pc) + '\')">'
+    + '<div style="display:flex;flex:1;min-width:0;align-items:center;gap:12px;" onclick="pSongNow(' + sid + ',\'' + window.escA(nm) + '\',\'' + window.escA(ar) + '\',\'' + window.escA(pc) + '\')">'
     + '<img src="' + pc + '?param=100y100" alt="" loading="lazy" />'
     + '<div class="s-info">'
-      + '<div class="sn">' + escH(nm) + '</div>'
-      + '<div class="sa">' + escH(ar) + '</div>'
+      + '<div class="sn">' + window.escH(nm) + '</div>'
+      + '<div class="sa">' + window.escH(ar) + '</div>'
     + '</div>'
     + '</div>'
     + '<div class="s-actions" onclick="event.stopPropagation();">'
-      + '<button class="s-action-btn" onclick="favSong(' + sid + ',\'' + escA(nm) + '\',\'' + escA(ar) + '\',\'' + escA(pc) + '\', this)" title="收藏"><i class="' + (isFav(sid) ? 'fas' : 'far') + ' fa-heart" style="color:' + (isFav(sid) ? 'var(--primary)' : '') + '"></i></button>'
-      + '<button class="s-action-btn" onclick="openAddPlModal(' + sid + ',\'' + escA(nm) + '\',\'' + escA(ar) + '\',\'' + escA(pc) + '\')" title="添加到播放列表"><i class="fas fa-plus"></i></button>'
+      + '<button class="s-action-btn" onclick="favSong(' + sid + ',\'' + window.escA(nm) + '\',\'' + window.escA(ar) + '\',\'' + window.escA(pc) + '\', this)" title="收藏"><i class="' + (window.isFav(sid) ? 'fas' : 'far') + ' fa-heart" style="color:' + (window.isFav(sid) ? 'var(--primary)' : '') + '"></i></button>'
+      + '<button class="s-action-btn" onclick="openAddPlModal(' + sid + ',\'' + window.escA(nm) + '\',\'' + window.escA(ar) + '\',\'' + window.escA(pc) + '\')" title="添加到播放列表"><i class="fas fa-plus"></i></button>'
     + '</div>'
     + '</div>';
-}
+};
 
-function setMineTab(tab, btn) {
+// ==================== "我的"页面选项卡 ====================
+window.setMineTab = function(tab, btn) {
   document.querySelectorAll('#mineTabs button').forEach(function(b){b.classList.remove('active')});
   if(btn) btn.classList.add('active');
   document.getElementById('mineHistory').style.display = 'none';
   document.getElementById('mineFavorites').style.display = 'none';
   document.getElementById('minePlaylists').style.display = 'none';
-  
+
   if(tab === 'history') {
       document.getElementById('mineHistory').style.display = 'flex';
-      renderMineHistory();
+      window.renderMineHistory();
   } else if(tab === 'favorites') {
       document.getElementById('mineFavorites').style.display = 'flex';
-      renderMineFavorites();
+      window.renderMineFavorites();
   } else if(tab === 'playlists') {
       document.getElementById('minePlaylists').style.display = 'flex';
-      renderMinePlaylists();
+      window.renderMinePlaylists();
   }
-}
+};
 
-function renderMineHistory() {
-  if(playHistory.length === 0) {
+window.renderMineHistory = function() {
+  if(window.playHistory.length === 0) {
       document.getElementById('mineHistory').innerHTML = '<div class="empty"><i class="fas fa-history"></i><div class="t">暂无播放记录</div></div>';
       return;
   }
-  document.getElementById('mineHistory').innerHTML = playHistory.map(function(s) {
-      return buildSongCardHtml(s);
+  document.getElementById('mineHistory').innerHTML = window.playHistory.map(function(s) {
+      return window.buildSongCardHtml(s);
   }).join('');
-}
+};
 
-function renderMineFavorites() {
-  if(myFavorites.length === 0) {
+window.renderMineFavorites = function() {
+  if(window.myFavorites.length === 0) {
       document.getElementById('mineFavorites').innerHTML = '<div class="empty"><i class="fas fa-heart"></i><div class="t">暂无收藏</div></div>';
       return;
   }
-  document.getElementById('mineFavorites').innerHTML = myFavorites.map(function(s) {
-      return buildSongCardHtml(s);
+  document.getElementById('mineFavorites').innerHTML = window.myFavorites.map(function(s) {
+      return window.buildSongCardHtml(s);
   }).join('');
-}
+};
 
-function renderMinePlaylists() {
-  if(customPlaylists.length === 0) {
+window.renderMinePlaylists = function() {
+  if(window.customPlaylists.length === 0) {
       document.getElementById('minePlaylists').innerHTML = '<div class="empty"><i class="fas fa-list"></i><div class="t">暂无自定义歌单</div><button class="btn" style="margin-top:14px" onclick="createNewPl()">创建歌单</button></div>';
       return;
   }
   var html = '<button class="btn btn-o" style="margin-bottom: 10px; width: max-content;" onclick="createNewPl()"><i class="fas fa-plus"></i> 新建歌单</button>';
-  html += customPlaylists.map(function(p, i) {
+  html += window.customPlaylists.map(function(p, i) {
       var cover = p.songs.length > 0 ? p.songs[0].pc + '?param=100y100' : 'https://picsum.photos/100';
       return '<div class="s-item" onclick="openCustomPl(' + i + ')">'
            + '<img src="' + cover + '" />'
-           + '<div class="s-info"><div class="sn">' + escH(p.name) + '</div><div class="sa">' + p.songs.length + ' 首歌曲</div></div>'
+           + '<div class="s-info"><div class="sn">' + window.escH(p.name) + '</div><div class="sa">' + p.songs.length + ' 首歌曲</div></div>'
            + '<button class="s-action-btn" onclick="event.stopPropagation(); deleteCustomPl(' + i + ')"><i class="fas fa-trash"></i></button>'
            + '</div>';
   }).join('');
   document.getElementById('minePlaylists').innerHTML = html;
-}
+};
 
-function deleteCustomPl(i) {
-  if(confirm('确定要删除歌单 [' + customPlaylists[i].name + '] 吗？')) {
-      customPlaylists.splice(i, 1);
-      saveCustomPl();
-      renderMinePlaylists();
+window.deleteCustomPl = function(i) {
+  if(confirm('确定要删除歌单 [' + window.customPlaylists[i].name + '] 吗？')) {
+      window.customPlaylists.splice(i, 1);
+      window.saveCustomPl();
+      window.renderMinePlaylists();
   }
-}
+};
