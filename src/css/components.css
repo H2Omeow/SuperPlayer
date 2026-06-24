@@ -1,7 +1,7 @@
 .body {
     position: relative;
     overflow: hidden;
-    padding: 20px 20px 100px;  /* 保留底部空间 */
+    padding: 20px 20px 100px;
 }
 
 /* ==================== 页面过渡生命周期框架 ==================== */
@@ -12,10 +12,9 @@
     padding: 0 0 100px 0;
     transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     pointer-events: none;
-    display: none;             /* 核心修复：彻底释放非活跃页面的渲染空间 */
+    display: none;
 }
 
-/* 仅在活跃和动画期赋予 block 展现 */
 .pg.active, .pg.animating {
     display: block;
 }
@@ -179,13 +178,45 @@
 .plc img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px}
 .plc .pn{font-size:11px;font-weight:500;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
+/* ==================== 下拉栏(含搜索补全等)强制接管 ==================== */
 .s-wrap{position:relative}
 .s-tabs{display:flex;gap:4px;margin-bottom:10px;width:100%}
 .s-tabs button{padding:7px 14px;border-radius:var(--radius);border:1px solid var(--glass-border);background:transparent;color:var(--text-secondary);font-size:13px;cursor:pointer;transition:all .2s;font-family:inherit}
 .s-tabs button:hover{border-color:var(--primary);color:var(--text-main)}
 .s-tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
-.s-drop{position:absolute;top:100%;left:0;right:0;background:rgba(15,15,19,0.96);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:var(--radius);max-height:260px;overflow-y:auto;z-index:100;display:none;margin-top:4px}
-.s-drop.show{display:block}
+
+.s-drop {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(15, 15, 19, 0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 100;
+    margin-top: 4px;
+
+    /* 核心修复：用 !important 压制 JS 生成的 display，只用透明度和位移做动画 */
+    display: block !important;
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+    pointer-events: none;
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                visibility 0.25s;
+}
+.s-drop.show {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
 .s-drop .si{padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:all .2s;font-size:13px}
 .s-drop .si:hover{background:rgba(243,18,96,0.08);color:var(--text-main)}
 
@@ -306,7 +337,7 @@
   transform: scale(0.95);
 }
 
-/* ==================== 可折叠卡片 ==================== */
+/* ==================== 可折叠卡片强制接管 ==================== */
 .collapsible-card {
   overflow: hidden;
 }
@@ -338,25 +369,36 @@
 .collapsible-card:not(.collapsed) .card-header.collapsible-trigger .collapse-arrow i {
   transform: rotate(180deg);
 }
+
+/* 核心修复：强制 block，利用 max-height 和 opacity 形成极度跟手的效果 */
 .collapsible-card .collapse-body {
-  max-height: 1200px;
+  display: block !important;
+  max-height: 800px;
   opacity: 1;
+  visibility: visible;
   padding-top: 12px;
   margin-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   overflow: hidden;
   transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.05s,
-              margin-top 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-              padding-top 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-              border-color 0.4s;
+              opacity 0.3s ease 0.1s,
+              margin-top 0.3s ease,
+              padding-top 0.3s ease,
+              border-color 0.3s ease;
 }
 .collapsible-card.collapsed .collapse-body {
   max-height: 0;
   opacity: 0;
+  visibility: hidden;
   padding-top: 0;
   margin-top: 0;
   border-color: transparent;
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.2s ease,
+              margin-top 0.3s ease,
+              padding-top 0.3s ease,
+              border-color 0.3s ease,
+              visibility 0.4s;
 }
 
 /* ==================== 页面底部边距 ==================== */
