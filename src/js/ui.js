@@ -1,3 +1,20 @@
+// ==================== 全局通用组件 ====================
+window.toast = function(msg) {
+  var div = document.createElement('div');
+  div.textContent = msg;
+  div.style.cssText = 'position:fixed; bottom:120px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:#fff; padding:10px 20px; border-radius:20px; font-size:13px; z-index:9999; opacity:0; transition:opacity 0.3s; pointer-events:none;';
+  document.body.appendChild(div);
+  requestAnimationFrame(function(){ div.style.opacity = '1'; });
+  setTimeout(function() {
+      div.style.opacity = '0';
+      setTimeout(function(){ if (div.parentNode) div.parentNode.removeChild(div); }, 300);
+  }, 2500);
+};
+
+window.showSleepTimerModal = function() {
+  document.getElementById('timerModal').classList.add('show');
+};
+
 // ==================== 搜索类型切换 ====================
 window.setSType = function(t, btn) {
   window.sType = t;
@@ -11,9 +28,7 @@ window.setSType = function(t, btn) {
 window.initGuestCookie = function() {
   if (!localStorage.getItem(window.ncKey) && !localStorage.getItem(window.ncGuestKey)) {
     window.fAPI('/register/anonimous').then(function(d) {
-      if (d.code === 200 && d.cookie) {
-        localStorage.setItem(window.ncGuestKey, d.cookie);
-      }
+      if (d.code === 200 && d.cookie) localStorage.setItem(window.ncGuestKey, d.cookie);
     }).catch(function(){});
   }
 };
@@ -47,8 +62,8 @@ window.qrLogin = function() {
   var img = document.getElementById('qrImg');
   var msg = document.getElementById('qrMsg');
   modal.classList.add('show');
-  img.src = '';
-  msg.textContent = '正在获取二维码...';
+  img.src = ''; msg.textContent = '正在获取二维码...';
+  
   window.fAPI('/login/qr/key?timestamp=' + Date.now()).then(function(d) {
     if (d.code === 200 && d.data && d.data.unikey) {
       var key = d.data.unikey;
@@ -58,18 +73,10 @@ window.qrLogin = function() {
           img.src = qd.data.qrimg;
           msg.textContent = '请使用网易云音乐 App 扫码';
           window.pollQR(key);
-        } else {
-          msg.textContent = '二维码生成失败';
-        }
-      }).catch(function() {
-        msg.textContent = '二维码生成失败，请检查 API';
-      });
-    } else {
-      msg.textContent = '获取二维码失败，请重试';
-    }
-  }).catch(function() {
-    msg.textContent = '获取二维码失败，请检查 API';
-  });
+        } else msg.textContent = '二维码生成失败';
+      }).catch(function() { msg.textContent = '二维码生成失败，请检查 API'; });
+    } else msg.textContent = '获取二维码失败，请重试';
+  }).catch(function() { msg.textContent = '获取二维码失败，请检查 API'; });
 };
 
 window.pollQR = function(key) {
@@ -93,9 +100,7 @@ window.pollQR = function(key) {
     } else {
       window.qrTimer = setTimeout(function() { window.pollQR(key); }, 2000);
     }
-  }).catch(function() {
-    window.qrTimer = setTimeout(function() { window.pollQR(key); }, 3000);
-  });
+  }).catch(function() { window.qrTimer = setTimeout(function() { window.pollQR(key); }, 3000); });
 };
 
 window.closeQR = function() {
@@ -112,33 +117,17 @@ window.updateNavIndicator = function(v) {
   document.querySelectorAll('[data-v="' + v + '"]').forEach(function(btn) {
     var parent = btn.parentElement;
     if (!parent) return;
-    
-    // 强制容器定位，作为滑块的参照物
-    if (window.getComputedStyle(parent).position === 'static') {
-      parent.style.position = 'relative';
-    }
-    
-    // 赋予容器定位坐标变量
+    if (window.getComputedStyle(parent).position === 'static') parent.style.position = 'relative';
     parent.style.setProperty('--ind-t', btn.offsetTop + 'px');
     parent.style.setProperty('--ind-l', btn.offsetLeft + 'px');
     parent.style.setProperty('--ind-w', btn.offsetWidth + 'px');
     parent.style.setProperty('--ind-h', btn.offsetHeight + 'px');
-    
-    if (!parent.classList.contains('has-ind')) {
-      parent.classList.add('has-ind');
-    }
+    if (!parent.classList.contains('has-ind')) parent.classList.add('has-ind');
   });
 };
 
-// 监听窗口大小变化（如横竖屏旋转），重置滑块坐标
-window.addEventListener('resize', function() {
-  if (window.currentPage) window.updateNavIndicator(window.currentPage);
-});
-
-// 延迟初始绘制（给 DOM 排版留出缓冲时间）
-setTimeout(function() {
-  if (window.currentPage) window.updateNavIndicator(window.currentPage);
-}, 150);
+window.addEventListener('resize', function() { if (window.currentPage) window.updateNavIndicator(window.currentPage); });
+setTimeout(function() { if (window.currentPage) window.updateNavIndicator(window.currentPage); }, 150);
 
 // ==================== 核心页面切换 ====================
 window.sw = function(v) {
@@ -152,49 +141,35 @@ window.sw = function(v) {
   var oldEl = document.getElementById('pg' + oldPage.charAt(0).toUpperCase() + oldPage.slice(1));
   var newEl = document.getElementById('pg' + v.charAt(0).toUpperCase() + v.slice(1));
 
-  // 按钮交互状态更替
   document.querySelectorAll('[data-v]').forEach(function(e) { e.classList.remove('active'); });
   document.querySelectorAll('[data-v="' + v + '"]').forEach(function(e) { e.classList.add('active'); });
 
-  // 触发高亮滑块移动
   window.updateNavIndicator(v);
 
   var pgTitle = document.getElementById('pgTitle');
-  if (pgTitle) {
-    pgTitle.textContent = {home:'主页', music:'网易云音乐', bilibili:'哔哩哔哩', mine:'我的'}[v] || '主页';
-  }
+  if (pgTitle) pgTitle.textContent = {home:'主页', music:'网易云音乐', bilibili:'哔哩哔哩', mine:'我的'}[v] || '主页';
 
-  // 处理旧页面的滑出
   if (oldEl) {
     oldEl.classList.add('animating'); 
     oldEl.classList.remove('active', 'slide-left', 'slide-right');
     oldEl.classList.add(isForward ? 'slide-left' : 'slide-right');
-    
     clearTimeout(oldEl.swTimer);
     oldEl.swTimer = setTimeout(function() {
-      if (!oldEl.classList.contains('active')) {
-        oldEl.classList.remove('animating', 'slide-left', 'slide-right');
-      }
+      if (!oldEl.classList.contains('active')) oldEl.classList.remove('animating', 'slide-left', 'slide-right');
     }, 420);
   }
 
-  // 处理新页面的滑入
   if (newEl) {
     newEl.classList.add('animating'); 
     newEl.style.transition = 'none';  
     newEl.classList.remove('active', 'slide-left', 'slide-right');
     newEl.classList.add(isForward ? 'slide-right' : 'slide-left');
-    
     void newEl.offsetWidth; 
-    
     newEl.style.transition = '';      
     newEl.classList.remove('slide-left', 'slide-right');
     newEl.classList.add('active');
-    
     clearTimeout(newEl.swTimer);
-    newEl.swTimer = setTimeout(function() {
-      newEl.classList.remove('animating');
-    }, 420);
+    newEl.swTimer = setTimeout(function() { newEl.classList.remove('animating'); }, 420);
   }
 
   window.currentPage = v;
@@ -206,11 +181,15 @@ window.sw = function(v) {
 
 // ==================== 更新日志 ====================
 window.logs = [
+  {d:'2026-06-26',t:'在全屏播放器上增加了独立的浏览器全屏按钮。'},
+  {d:'2026-06-26',t:'更改随机壁纸获取逻辑，提前在服务端进行计算，提高壁纸获取速率。'},
+  {d:'2026-06-26',t:'新增：音乐定时关闭睡眠模式、单曲循环/随机播放模式控制切换机制。'},
+  {d:'2026-06-26',t:'新增：接入 MediaSession 系统媒体控件 API，支持手机状态栏切歌及实时动态歌词展示。'},
   {d:'2026-06-24',t:'添加大量过渡动画，提升网站整体观感'},
   {d:'2026-06-23',t:'使用vite进行标准化重构，未播放音乐时为主页播放器状态添加图片占位符'},
   {d:'2026-06-22',t:'全体系大更新：新增游客自动认证（防错误）、自定义多层歌单系统、我的界面历史记录；卡片可分离式一键秒插播及收藏。'},
   {d:'2026-06-20',t:'全屏纯净穿透：全屏模式下屏蔽背景组件，直达壁纸；同时开放全屏界面的独立模糊效果与透明度参数调节。'},
-  {d:'2026-06-20',t:'自适应最优比例裁剪：彻底重构壁纸轮询体系，直接计算与用户视口的"最相近比例差"，并行筛选最佳壁纸无缝呈现。'}
+  {d:'2026-06-20',t:'自适应最优比例裁剪：彻底重构壁纸轮询体系，后端预检计算尺寸抽样下发。'}
 ];
 
 window.shCL = function() {
@@ -220,9 +199,7 @@ window.shCL = function() {
   document.getElementById('clModal').classList.add('show');
 };
 
-window.hdCL = function() {
-  document.getElementById('clModal').classList.remove('show');
-};
+window.hdCL = function() { document.getElementById('clModal').classList.remove('show'); };
 
 // ==================== 歌曲卡片渲染 ====================
 window.buildSongCardHtml = function(s) {
@@ -231,10 +208,7 @@ window.buildSongCardHtml = function(s) {
   return '<div class="s-item">'
     + '<div style="display:flex;flex:1;min-width:0;align-items:center;gap:12px;" onclick="pSongNow(' + sid + ',\'' + window.escA(nm) + '\',\'' + window.escA(ar) + '\',\'' + window.escA(pc) + '\')">'
     + '<img src="' + imgSrc + '" alt="" loading="lazy" onerror="imgFallback(this)" />'
-    + '<div class="s-info">'
-      + '<div class="sn">' + window.escH(nm) + '</div>'
-      + '<div class="sa">' + window.escH(ar) + '</div>'
-    + '</div>'
+    + '<div class="s-info"><div class="sn">' + window.escH(nm) + '</div><div class="sa">' + window.escH(ar) + '</div></div>'
     + '</div>'
     + '<div class="s-actions" onclick="event.stopPropagation();">'
       + '<button class="s-action-btn" onclick="favSong(' + sid + ',\'' + window.escA(nm) + '\',\'' + window.escA(ar) + '\',\'' + window.escA(pc) + '\', this)" title="收藏"><i class="' + (window.isFav(sid) ? 'fas' : 'far') + ' fa-heart" style="color:' + (window.isFav(sid) ? 'var(--primary)' : '') + '"></i></button>'
@@ -268,9 +242,7 @@ window.renderMineHistory = function() {
       document.getElementById('mineHistory').innerHTML = '<div class="empty"><i class="fas fa-history"></i><div class="t">暂无播放记录</div></div>';
       return;
   }
-  document.getElementById('mineHistory').innerHTML = window.playHistory.map(function(s) {
-      return window.buildSongCardHtml(s);
-  }).join('');
+  document.getElementById('mineHistory').innerHTML = window.playHistory.map(function(s) { return window.buildSongCardHtml(s); }).join('');
 };
 
 window.renderMineFavorites = function() {
@@ -278,9 +250,7 @@ window.renderMineFavorites = function() {
       document.getElementById('mineFavorites').innerHTML = '<div class="empty"><i class="fas fa-heart"></i><div class="t">暂无收藏</div></div>';
       return;
   }
-  document.getElementById('mineFavorites').innerHTML = window.myFavorites.map(function(s) {
-      return window.buildSongCardHtml(s);
-  }).join('');
+  document.getElementById('mineFavorites').innerHTML = window.myFavorites.map(function(s) { return window.buildSongCardHtml(s); }).join('');
 };
 
 window.renderMinePlaylists = function() {
@@ -291,12 +261,7 @@ window.renderMinePlaylists = function() {
   var ph = window.coverPlaceholder();
   var html = '<button class="btn btn-o" style="margin-bottom: 10px; width: max-content;" onclick="createNewPl()"><i class="fas fa-plus"></i> 新建歌单</button>';
   html += window.customPlaylists.map(function(p, i) {
-      var cover;
-      if (p.songs.length > 0 && p.songs[0].pc) {
-        cover = p.songs[0].pc + '?param=100y100';
-      } else {
-        cover = ph;
-      }
+      var cover = (p.songs.length > 0 && p.songs[0].pc) ? (p.songs[0].pc + '?param=100y100') : ph;
       return '<div class="s-item" onclick="openCustomPl(' + i + ')">'
            + '<img src="' + cover + '" onerror="imgFallback(this)" />'
            + '<div class="s-info"><div class="sn">' + window.escH(p.name) + '</div><div class="sa">' + p.songs.length + ' 首歌曲</div></div>'
@@ -313,3 +278,41 @@ window.deleteCustomPl = function(i) {
       window.renderMinePlaylists();
   }
 };
+
+// ==================== 全局通用组件补充 (修复弹窗层级) ====================
+// 强制动态注入超高层级 CSS 规则，确保弹窗在全屏播放器上层
+(function() {
+  var s = document.createElement('style');
+  s.innerHTML = '.modal { z-index: 99999 !important; }';
+  document.head.appendChild(s);
+})();
+
+// ==================== 设备级沉浸式全屏逻辑 ====================
+window.toggleNativeFs = function() {
+  var elem = document.documentElement;
+  if (!document.fullscreenElement) {
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen().catch(function(){ window.toast('浏览器拦截了全屏请求，请手动展开'); });
+    } else if (elem.webkitRequestFullscreen) { /* Safari 兼容 */
+      elem.webkitRequestFullscreen();
+    } else if (elem.msRequestFullscreen) { /* IE11 兼容 */
+      elem.msRequestFullscreen();
+    }
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen();
+    }
+  }
+};
+
+// 监听设备的真实全屏状态，同步更改图标
+document.addEventListener('fullscreenchange', function() {
+  var icon = document.getElementById('nativeFsIcon');
+  if (icon) {
+    icon.className = document.fullscreenElement ? 'fas fa-compress' : 'fas fa-expand';
+  }
+});

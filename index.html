@@ -40,9 +40,8 @@
   <div class="topbar"><span id="pgTitle">主页</span></div>
   <div class="body">
 
-        <!-- ================= 1. 主页 ================= -->
+    <!-- ================= 1. 主页 ================= -->
     <div class="pg active" id="pgHome">
-      <!-- ★ 新增：顶部播放状态栏（替代原播放统计卡片） -->
       <div class="top-status" id="topStatus">
         <img id="statusCover" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23151520' rx='10'/%3E%3Ccircle cx='100' cy='85' r='32' fill='none' stroke='rgba(243,18,96,0.3)' stroke-width='2.5'/%3E%3Cpolygon points='90,73 90,97 114,85' fill='rgba(243,18,96,0.35)'/%3E%3Ctext x='100' y='148' text-anchor='middle' font-family='sans-serif' font-size='12' fill='rgba(255,255,255,0.18)'%3E暂无封面%3C/text%3E%3C/svg%3E" alt="封面" onerror="imgFallback(this)" onclick="tFull()" />
         <div class="status-info" onclick="tFull()">
@@ -55,7 +54,7 @@
         </div>
       </div>
       <div class="grid-2">
-        <!-- 卡片1：系统状态（默认折叠） -->
+        <!-- 卡片1：系统状态 -->
         <div class="card collapsible-card collapsed">
           <div class="card-header collapsible-trigger" onclick="toggleCollapse(this)">
             <span><i class="fas fa-circle" style="font-size:7px;color:#4ade80"></i> 系统状态</span>
@@ -67,7 +66,7 @@
             <div class="ir"><span class="l">服务器</span><span class="v">Node.js Express</span></div>
           </div>
         </div>
-         <!-- 卡片2：视觉设置（默认折叠） -->
+         <!-- 卡片2：视觉设置 -->
         <div class="card full-w collapsible-card collapsed">
           <div class="card-header collapsible-trigger" onclick="toggleCollapse(this)">
             <span><i class="fas fa-palette"></i> 个性化视觉设置</span>
@@ -254,6 +253,7 @@
 
   </div> <!-- ==== /body 全局容器彻底闭合 ==== -->
 
+
   <!-- ================= 5. 全局组件 (悬浮栏 / 弹窗) ================= -->
 
   <!-- 悬浮播放栏 -->
@@ -274,7 +274,10 @@
       <button class="pb1" onclick="tPlay()"><i class="fas fa-play" id="pIcn"></i></button>
       <button onclick="next()" title="下一首"><i class="fas fa-step-forward"></i></button>
     </div>
+    <!-- 播放模式切换和定时关闭按钮 -->
     <div class="px">
+      <button id="modeBtn" onclick="togglePlayMode()" title="列表循环"><i class="fas fa-retweet"></i></button>
+      <button onclick="showSleepTimerModal()" title="定时关闭"><i class="fas fa-clock"></i></button>
       <button onclick="shPL()" title="当前播放列表"><i class="fas fa-list"></i></button>
       <select onchange="document.getElementById('qSel').value=this.value"><option value="standard">标准</option><option value="higher">较高</option><option value="exhigh" selected>极高</option><option value="lossless">无损</option></select>
     </div>
@@ -283,6 +286,9 @@
   <!-- 全屏播放器 -->
   <div class="fp" id="fullP">
     <button class="fc1" onclick="tFull()"><i class="fas fa-times"></i></button>
+    <!-- 沉浸式全屏/退出全屏按钮 -->
+    <button onclick="toggleNativeFs()" style="position:absolute; top:20px; right:65px; width:40px; height:40px; border-radius:50%; background:rgba(0,0,0,0.2); border:none; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:10;"><i class="fas fa-expand" id="nativeFsIcon"></i></button>
+    
     <img id="fpCvr" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%23151520' rx='20'/%3E%3Ccircle cx='200' cy='175' r='70' fill='none' stroke='rgba(243,18,96,0.3)' stroke-width='5'/%3E%3Cpolygon points='180,150 180,200 230,175' fill='rgba(243,18,96,0.35)'/%3E%3Ctext x='200' y='300' text-anchor='middle' font-family='sans-serif' font-size='24' fill='rgba(255,255,255,0.18)'%3E暂无封面%3C/text%3E%3C/svg%3E" alt="封面" onerror="imgFallback(this)" />
     <div class="ft" id="fpTtl">未播放</div>
     <div class="fa" id="fpArt">-</div>
@@ -292,10 +298,13 @@
       <span class="t" id="fpDur">00:00</span>
     </div>
     <div class="lc" id="lyrBox"><ul id="lyrUl"></ul></div>
+    <!-- 播放模式与播放列表快捷按钮 -->
     <div class="fc">
+      <button id="fpModeBtn" onclick="togglePlayMode()" title="列表循环"><i class="fas fa-retweet"></i></button>
       <button onclick="prev()"><i class="fas fa-step-backward"></i></button>
       <button class="fpb" onclick="tPlay()"><i class="fas fa-play" id="fpIcn"></i></button>
       <button onclick="next()"><i class="fas fa-step-forward"></i></button>
+      <button onclick="shPL()"><i class="fas fa-list"></i></button>
     </div>
   </div>
 
@@ -340,6 +349,21 @@
     <div class="mc">
       <h2><span><i class="fas fa-history" style="color:var(--primary);margin-right:8px"></i>更新日志</span><button class="close" onclick="hdCL()"><i class="fas fa-times"></i></button></h2>
       <div id="clList"></div>
+    </div>
+  </div>
+
+  <!-- ★修改点3: 定时关闭模态框 -->
+  <div class="modal" id="timerModal" onclick="if(event.target===this)this.classList.remove('show')">
+    <div class="mc">
+      <h2><span><i class="fas fa-clock" style="color:var(--primary);margin-right:8px"></i>定时关闭</span><button class="close" onclick="document.getElementById('timerModal').classList.remove('show')"><i class="fas fa-times"></i></button></h2>
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:14px;">
+        <button class="btn btn-o" onclick="setSleepTimer(0)">不开启</button>
+        <button class="btn btn-o" onclick="setSleepTimer(15)">15分钟后暂停</button>
+        <button class="btn btn-o" onclick="setSleepTimer(30)">30分钟后暂停</button>
+        <button class="btn btn-o" onclick="setSleepTimer(45)">45分钟后暂停</button>
+        <button class="btn btn-o" onclick="setSleepTimer(60)">60分钟后暂停</button>
+        <button class="btn btn-o" onclick="setSleepTimer('custom')">自定义时间...</button>
+      </div>
     </div>
   </div>
 

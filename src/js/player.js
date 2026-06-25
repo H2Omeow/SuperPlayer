@@ -3,6 +3,7 @@ window.pSongNow = function(id, nm, ar, pc) {
   var song = {id:id, nm:nm, ar:ar, pc:pc};
   if (window.list.length === 0) {
     window.list.push(song);
+    if (window.playMode === 'random') window.originalList.push(song);
     window.playByIdx(0);
     return;
   }
@@ -13,16 +14,96 @@ window.pSongNow = function(id, nm, ar, pc) {
     if (existingIdx < window.idx) window.idx--;
   }
   window.list.splice(window.idx + 1, 0, song);
+  
+  if (window.playMode === 'random') {
+    var currentId = window.list[window.idx].id;
+    var oIdx = window.originalList.findIndex(function(s) { return s.id === currentId; });
+    if (oIdx >= 0) window.originalList.splice(oIdx + 1, 0, song);
+    else window.originalList.push(song);
+  }
   window.playByIdx(window.idx + 1);
 };
 
 window.pSong = function(id, nm, ar, pc) {
+  var song = {id:id, nm:nm, ar:ar, pc:pc};
   if (window.list.length === 0) {
-    window.list.push({id:id,nm:nm,ar:ar,pc:pc});
+    window.list.push(song);
+    if (window.playMode === 'random') window.originalList.push(song);
     window.playByIdx(0);
   } else {
-    window.list.push({id:id,nm:nm,ar:ar,pc:pc});
+    window.list.push(song);
+    if (window.playMode === 'random') window.originalList.push(song);
     window.toast('已添加到播放列表');
+  }
+  window.renderPL();
+};
+
+// ==================== 播放模式控制 (循环/单曲/随机) ====================
+window.togglePlayMode = function() {
+  var modes = ['loop', 'single', 'random'];
+  var nextIdx = (modes.indexOf(window.playMode) + 1) % 3;
+  window.playMode = modes[nextIdx];
+  
+  var icons = { 'loop': 'fa-retweet', 'single': 'fa-sync', 'random': 'fa-random' };
+  var labels = { 'loop': '列表循环', 'single': '单曲循环', 'random': '随机播放' };
+  
+  var mBtn = document.getElementById('modeBtn');
+  var fBtn = document.getElementById('fpModeBtn');
+  if(mBtn) mBtn.innerHTML = '<i class="fas ' + icons[window.playMode] + '"></i>';
+  if(fBtn) fBtn.innerHTML = '<i class="fas ' + icons[window.playMode] + '"></i>';
+  window.toast(labels[window.playMode]);
+
+  if (window.playMode === 'random') {
+      if (window.originalList.length === 0) window.originalList = window.list.slice();
+      
+      if (window.list.length > 1) {
+          var currentSong = window.list[window.idx];
+          var remaining = window.list.filter(function(_, i) { return i !== window.idx; });
+          
+          // Fisher-Yates 洗牌算法打乱
+          for (var i = remaining.length - 1; i > 0; i--) {
+              var j = Math.floor(Math.random() * (i + 1));
+              var temp = remaining[i];
+              remaining[i] = remaining[j];
+              remaining[j] = temp;
+          }
+          window.list = [currentSong].concat(remaining);
+          window.idx = 0;
+      }
+  } else if (window.playMode === 'loop') {
+      if (window.originalList.length > 0) {
+          var currentSongId = window.list[window.idx] ? window.list[window.idx].id : null;
+          window.list = window.originalList.slice();
+          window.originalList = [];
+          if (currentSongId) {
+              var newIdx = window.list.findIndex(function(s) { return s.id === currentSongId; });
+              if (newIdx !== -1) window.idx = newIdx;
+          }
+      }
+  }
+  window.renderPL();
+};
+
+// ==================== 定时关闭功能 ====================
+window.setSleepTimer = function(mins) {
+  if (window.sleepTimer) { clearTimeout(window.sleepTimer); window.sleepTimer = null; }
+  document.getElementById('timerModal').classList.remove('show');
+  
+  if (mins === 'custom') {
+      var input = prompt('请输入定时关闭的时间（分钟）：');
+      if (input !== null && !isNaN(input) && input > 0) mins = parseInt(input);
+      else return;
+  }
+  
+  if (mins > 0) {
+      window.toast('将在 ' + mins + ' 分钟后自动停止播放');
+      window.sleepTimer = setTimeout(function() {
+          var a = document.getElementById('aPlayer');
+          if (!a.paused) window.tPlay();
+          window.toast('⏰ 定时关闭已触发');
+      }, mins * 60 * 1000);
+  } else {
+      window.toast('已取消定时关闭');
   }
 };
 
@@ -36,7 +117,6 @@ window.playByIdx = function(i) {
   document.getElementById('pTtl').textContent = s.nm;
   document.getElementById('pArt').textContent = s.ar;
 
-  // 安全设置封面：空 URL 时使用占位图
   if (coverUrl) {
     document.getElementById('pCvr').src = coverUrl + '?param=100y100';
     document.getElementById('fpCvr').src = coverUrl + '?param=400y400';
@@ -52,10 +132,10 @@ window.playByIdx = function(i) {
   document.getElementById('fpArt').textContent = s.ar;
   document.getElementById('nowPlaying').textContent = s.nm;
   document.getElementById('statusArtist').textContent = s.ar;
-  var cnt = parseInt(document.getElementById('playedCnt').textContent) || 0;
 
   window.addToHistory(s);
   window.fLrc(s.id);
+  window.updateMediaSession(s, "正在匹配歌词...");
 
   var q = document.getElementById('qSel').value;
   var ck = window.getNCookie();
@@ -73,6 +153,24 @@ window.playByIdx = function(i) {
   .catch(function() {
     window.tryBackupSongUrl(s.id, backupBr, ck);
   });
+};
+
+// ==================== 浏览器系统媒体控件对接 ====================
+window.updateMediaSession = function(song, lyricText) {
+  if ('mediaSession' in navigator) {
+    var coverUrl = song.pc ? (song.pc + '?param=500y500') : window.coverPlaceholder();
+    navigator.mediaSession.metadata = new MediaMetadata({
+        title: song.nm,
+        artist: song.ar,
+        album: lyricText || '超级播放器',
+        artwork: [{ src: coverUrl, sizes: '500x500', type: 'image/jpeg' }]
+    });
+    
+    navigator.mediaSession.setActionHandler('play', function() { if(document.getElementById('aPlayer').paused) window.tPlay(); });
+    navigator.mediaSession.setActionHandler('pause', function() { if(!document.getElementById('aPlayer').paused) window.tPlay(); });
+    navigator.mediaSession.setActionHandler('previoustrack', function() { window.prev(); });
+    navigator.mediaSession.setActionHandler('nexttrack', function() { window.next(); });
+  }
 };
 
 window.tryBackupSongUrl = function(id, br, ck) {
@@ -123,8 +221,15 @@ window.tFull = function() {
   else document.body.classList.remove('fs-mode');
 };
 
-window.prev = function() { if (window.idx > 0) window.playByIdx(window.idx - 1); };
-window.next = function() { if (window.idx < window.list.length - 1) window.playByIdx(window.idx + 1); };
+window.prev = function() { 
+  if (window.idx > 0) window.playByIdx(window.idx - 1); 
+  else if (window.list.length > 0) window.playByIdx(window.list.length - 1);
+};
+
+window.next = function() { 
+  if (window.idx < window.list.length - 1) window.playByIdx(window.idx + 1); 
+  else if (window.list.length > 0) window.playByIdx(0);
+};
 
 // ==================== 进度条拖动 ====================
 window.seek = function(e) {
@@ -513,6 +618,7 @@ window.execAddPl = function(plIdx) {
   if (!window.pendingAddSong) return;
   if (plIdx === -1) {
     window.list.push(window.pendingAddSong);
+    if (window.playMode === 'random') window.originalList.push(window.pendingAddSong);
     window.toast('已加入到当前播放列表尾部');
   } else {
     if (!window.customPlaylists[plIdx].songs.some(function(s){return s.id === window.pendingAddSong.id})) {
@@ -700,17 +806,26 @@ window.toggleCollapse = function(header) {
     document.getElementById('durT').textContent = window.fmtT(this.duration);
     document.getElementById('fpDur').textContent = window.fmtT(this.duration);
     document.getElementById('fpCurT').textContent = window.fmtT(this.currentTime);
+    
     if (!window.lyrics.length) return;
     var idx2 = -1;
     for (var j = window.lyrics.length - 1; j >= 0; j--) { if (window.lyrics[j].time <= this.currentTime) { idx2 = j; break; } }
     var target = idx2 < 0 ? 0 : idx2;
     var li = document.getElementById('l' + target);
+    
     if (li) {
       if (li.getAttribute('data-active') !== '1') {
         document.querySelectorAll('#lyrUl li').forEach(function(el) { el.classList.remove('active'); el.removeAttribute('data-active'); });
         li.classList.add('active');
         li.setAttribute('data-active', '1');
         li.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        
+        // 动态向通知栏输出实时歌词 (仅在行发生改变时同步，防高频卡死)
+        if (window.lastLyricIdx !== target && window.list[window.idx]) {
+            window.lastLyricIdx = target;
+            var lyricText = window.lyrics[target].text;
+            window.updateMediaSession(window.list[window.idx], lyricText);
+        }
       }
     }
   });
@@ -719,7 +834,6 @@ window.toggleCollapse = function(header) {
     window.play = true; window.upIcn();
     if (window.rafId) cancelAnimationFrame(window.rafId);
     window.rafId = requestAnimationFrame(window.rafWords);
-    // 同步状态栏图标
     var icon = document.getElementById('statusPlayIcon');
     if (icon) icon.innerHTML = '<i class="fas fa-pause"></i>';
   });
@@ -727,7 +841,6 @@ window.toggleCollapse = function(header) {
   ae.addEventListener('pause', function() {
     window.play = false; window.upIcn();
     if (window.rafId) { cancelAnimationFrame(window.rafId); window.rafId = null; }
-    // 同步状态栏图标
     var icon = document.getElementById('statusPlayIcon');
     if (icon) icon.innerHTML = '<i class="fas fa-play"></i>';
   });
@@ -735,6 +848,26 @@ window.toggleCollapse = function(header) {
   ae.addEventListener('ended', function() {
     window.play = false; window.upIcn();
     if (window.rafId) { cancelAnimationFrame(window.rafId); window.rafId = null; }
-    if (window.idx < window.list.length - 1) window.next();
+    
+    if (window.playMode === 'single') {
+        this.currentTime = 0;
+        this.play();
+    } else {
+        // 如果是随机模式且已经播放到整个列表的结尾，重新打乱列表并自动循环续播
+        if (window.playMode === 'random' && window.idx >= window.list.length - 1 && window.list.length > 1) {
+            var currentSong = window.list[window.idx];
+            var remaining = window.list.filter(function(_, i) { return i !== window.idx; });
+            for (var i = remaining.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var temp = remaining[i];
+                remaining[i] = remaining[j];
+                remaining[j] = temp;
+            }
+            window.list = [currentSong].concat(remaining);
+            window.idx = 0; // 重置游标
+            window.renderPL(); // 更新洗牌后的 UI
+        }
+        window.next();
+    }
   });
 })();
