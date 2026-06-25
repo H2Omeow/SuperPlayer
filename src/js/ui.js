@@ -107,6 +107,39 @@ window.closeQR = function() {
 window.pageOrder = ['home', 'music', 'mine', 'bilibili'];
 window.currentPage = 'home';
 
+// ==================== 导航高亮滑动指示器引擎 ====================
+window.updateNavIndicator = function(v) {
+  document.querySelectorAll('[data-v="' + v + '"]').forEach(function(btn) {
+    var parent = btn.parentElement;
+    if (!parent) return;
+    
+    // 强制容器定位，作为滑块的参照物
+    if (window.getComputedStyle(parent).position === 'static') {
+      parent.style.position = 'relative';
+    }
+    
+    // 赋予容器定位坐标变量
+    parent.style.setProperty('--ind-t', btn.offsetTop + 'px');
+    parent.style.setProperty('--ind-l', btn.offsetLeft + 'px');
+    parent.style.setProperty('--ind-w', btn.offsetWidth + 'px');
+    parent.style.setProperty('--ind-h', btn.offsetHeight + 'px');
+    
+    if (!parent.classList.contains('has-ind')) {
+      parent.classList.add('has-ind');
+    }
+  });
+};
+
+// 监听窗口大小变化（如横竖屏旋转），重置滑块坐标
+window.addEventListener('resize', function() {
+  if (window.currentPage) window.updateNavIndicator(window.currentPage);
+});
+
+// 延迟初始绘制（给 DOM 排版留出缓冲时间）
+setTimeout(function() {
+  if (window.currentPage) window.updateNavIndicator(window.currentPage);
+}, 150);
+
 // ==================== 核心页面切换 ====================
 window.sw = function(v) {
   var oldPage = window.currentPage;
@@ -119,8 +152,12 @@ window.sw = function(v) {
   var oldEl = document.getElementById('pg' + oldPage.charAt(0).toUpperCase() + oldPage.slice(1));
   var newEl = document.getElementById('pg' + v.charAt(0).toUpperCase() + v.slice(1));
 
+  // 按钮交互状态更替
   document.querySelectorAll('[data-v]').forEach(function(e) { e.classList.remove('active'); });
   document.querySelectorAll('[data-v="' + v + '"]').forEach(function(e) { e.classList.add('active'); });
+
+  // 触发高亮滑块移动
+  window.updateNavIndicator(v);
 
   var pgTitle = document.getElementById('pgTitle');
   if (pgTitle) {
@@ -129,36 +166,35 @@ window.sw = function(v) {
 
   // 处理旧页面的滑出
   if (oldEl) {
-    oldEl.classList.add('animating'); // 强制保留 render 图层
+    oldEl.classList.add('animating'); 
     oldEl.classList.remove('active', 'slide-left', 'slide-right');
     oldEl.classList.add(isForward ? 'slide-left' : 'slide-right');
     
     clearTimeout(oldEl.swTimer);
     oldEl.swTimer = setTimeout(function() {
       if (!oldEl.classList.contains('active')) {
-        // 动画结束彻底隐身，防止残留乱飘
         oldEl.classList.remove('animating', 'slide-left', 'slide-right');
       }
-    }, 360);
+    }, 420);
   }
 
   // 处理新页面的滑入
   if (newEl) {
-    newEl.classList.add('animating'); // 先占位
-    newEl.style.transition = 'none';  // 禁用动画确保放置到正确起点
+    newEl.classList.add('animating'); 
+    newEl.style.transition = 'none';  
     newEl.classList.remove('active', 'slide-left', 'slide-right');
     newEl.classList.add(isForward ? 'slide-right' : 'slide-left');
     
-    void newEl.offsetWidth; // 触发重绘
+    void newEl.offsetWidth; 
     
-    newEl.style.transition = '';      // 恢复动画
+    newEl.style.transition = '';      
     newEl.classList.remove('slide-left', 'slide-right');
     newEl.classList.add('active');
     
     clearTimeout(newEl.swTimer);
     newEl.swTimer = setTimeout(function() {
-      newEl.classList.remove('animating'); // 动画结束剥离占位类
-    }, 360);
+      newEl.classList.remove('animating');
+    }, 420);
   }
 
   window.currentPage = v;

@@ -4,13 +4,54 @@
     padding: 20px 20px 100px;
 }
 
+/* ==================== 导航栏动效 ==================== */
+.has-ind {
+    position: relative;
+    z-index: 1; 
+}
+/* 生成一个脱离文档流但吸附定位的背景色块，由JS变量赋予坐标 */
+.has-ind::before {
+    content: '';
+    position: absolute;
+    top: var(--ind-t, 0);
+    left: var(--ind-l, 0);
+    width: var(--ind-w, 0);
+    height: var(--ind-h, 0);
+    background: var(--primary);
+    
+    /* 核心修改：绑定全局透明度和模糊度变量，与主页控件完全同步！ */
+    opacity: var(--opacity-val, 0.85); 
+    backdrop-filter: var(--blur-val);
+    -webkit-backdrop-filter: var(--blur-val);
+    
+    border-radius: var(--radius, 8px);
+    transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    z-index: -1;
+    pointer-events: none; 
+}
+
+/* 赋予菜单按钮物理反馈与层级 */
+[data-v] {
+    position: relative;
+    z-index: 2; 
+    transition: color 0.3s ease, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+[data-v]:active {
+    transform: scale(0.92); 
+}
+[data-v].active {
+    background-color: transparent !important; 
+    box-shadow: none !important;
+    color: #fff !important; 
+}
+
 /* ==================== 页面过渡生命周期框架 ==================== */
 .pg {
     position: absolute;
     inset: 0;
     overflow-y: auto;
     padding: 0 0 100px 0;
-    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
     pointer-events: none;
     display: none;
 }
@@ -20,17 +61,22 @@
 }
 
 .pg.active {
-    transform: translateX(0);
+    transform: translate(0, 0);
     pointer-events: auto;
 }
 
-.pg.slide-left {
-    transform: translateX(-100%);
+/* --- 移动端/窄屏：左右滑动（横向）--- */
+@media (max-width: 768px) {
+    .pg.slide-left { transform: translateX(-100%); }
+    .pg.slide-right { transform: translateX(100%); }
 }
 
-.pg.slide-right {
-    transform: translateX(100%);
+/* --- 桌面端/宽屏：上下滑动（纵向）--- */
+@media (min-width: 769px) {
+    .pg.slide-left { transform: translateY(-100%); }
+    .pg.slide-right { transform: translateY(100%); }
 }
+
 
 /* ==================== 卡片基础样式 ==================== */
 .card{
@@ -370,7 +416,6 @@
   transform: rotate(180deg);
 }
 
-/* 核心修复：强制 block，利用 max-height 和 opacity 形成极度跟手的效果 */
 .collapsible-card .collapse-body {
   display: block !important;
   max-height: 800px;
