@@ -871,3 +871,254 @@ window.toggleCollapse = function(header) {
     }
   });
 })();
+
+
+// ==================== 环形高保真音频可视化视觉引擎 ====================
+// 1. 定义全局默认配置
+window.visSettings = {
+  theme: 'netease',
+  amp: 1.8,       
+  smooth: 0.75,   
+  bars: 76        
+};
+
+// 从 localStorage 读取保存的配置
+(function() {
+  try {
+    var saved = localStorage.getItem('visSettings');
+    if (saved) {
+      var parsed = JSON.parse(saved);
+      if (parsed) {
+        // 使用本地数据覆盖默认数据
+        window.visSettings = Object.assign({}, window.visSettings, parsed);
+      }
+    }
+  } catch (e) {
+    console.error('读取本地频谱配置失败:', e);
+  }
+})();
+
+// 将当前的配置同步到 HTML UI 控件上
+window.syncVisSettingsToUI = function() {
+  var tSel = document.getElementById('visThemeSel');
+  var aRng = document.getElementById('visAmpRange');
+  var sRng = document.getElementById('visSmoothRange');
+  var bRng = document.getElementById('visBarsRange');
+  
+  if (tSel && window.visSettings.theme) tSel.value = window.visSettings.theme;
+  if (aRng) { aRng.value = window.visSettings.amp; var el = document.getElementById('visAmpVal'); if(el) el.textContent = aRng.value + 'x'; }
+  if (sRng) { sRng.value = window.visSettings.smooth; var el = document.getElementById('visSmoothVal'); if(el) el.textContent = sRng.value; }
+  if (bRng) { bRng.value = window.visSettings.bars; var el = document.getElementById('visBarsVal'); if(el) el.textContent = bRng.value + '根'; }
+};
+
+// 当用户拖动滑块或改变选择时：读取 UI 值并保存到本地
+window.updateVisSettings = function() {
+  var tSel = document.getElementById('visThemeSel');
+  var aRng = document.getElementById('visAmpRange');
+  var sRng = document.getElementById('visSmoothRange');
+  var bRng = document.getElementById('visBarsRange');
+  
+  if(tSel) window.visSettings.theme = tSel.value;
+  if(aRng) { window.visSettings.amp = parseFloat(aRng.value); var el = document.getElementById('visAmpVal'); if(el) el.textContent = aRng.value + 'x'; }
+  if(sRng) { window.visSettings.smooth = parseFloat(sRng.value); var el = document.getElementById('visSmoothVal'); if(el) el.textContent = sRng.value; }
+  if(bRng) { window.visSettings.bars = parseInt(bRng.value); var el = document.getElementById('visBarsVal'); if(el) el.textContent = bRng.value + '根'; }
+  
+  // 写入本地存储
+  try {
+    localStorage.setItem('visSettings', JSON.stringify(window.visSettings));
+  } catch(e) {
+    console.error('保存频谱配置失败:', e);
+  }
+  
+  // 如果音频分析器已启动，实时更新平滑度
+  if (window._analyserNode) {
+    window._analyserNode.smoothingTimeConstant = window.visSettings.smooth;
+  }
+};
+
+// 重置参数并清空本地存储
+window.resetVisPreset = function() {
+  window.visSettings = {
+    theme: 'netease',
+    amp: 1.8,
+    smooth: 0.75,
+    bars: 76
+  };
+  try {
+    localStorage.setItem('visSettings', JSON.stringify(window.visSettings));
+  } catch(e) {}
+  
+  // 同步更新 UI 状态
+  window.syncVisSettingsToUI();
+  
+  if (window._analyserNode) {
+    window._analyserNode.smoothingTimeConstant = window.visSettings.smooth;
+  }
+  window.toast('已重置频谱参数');
+};
+
+// 2. 视觉引擎主逻辑
+(function() {
+  let audioContext = null;
+  let analyser = null;
+  let dataArray = null;
+  let source = null;
+  let isInitialized = false;
+  
+  let spectrumRotation = 0; 
+  let fixedRadius = 110;    
+
+  function initVisualizer() {
+    if (isInitialized) return;
+
+    const ae = document.getElementById('aPlayer');
+    const canvas = document.getElementById('visualizerCanvas');
+    if (!ae || !canvas) return;
+
+    const ctx = canvas.getContext('2d');
+
+    try {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 512; 
+      analyser.smoothingTimeConstant = window.visSettings.smooth; 
+      
+      window._analyserNode = analyser; 
+      
+      source = audioContext.createMediaElementSource(ae);
+      source.connect(analyser);
+      analyser.connect(audioContext.destination);
+    } catch (e) {
+      console.error('Web Audio API 初始化失败:', e);
+      return;
+    }
+
+    const bufferLength = analyser.frequencyBinCount;
+    dataArray = new Uint8Array(bufferLength);
+    isInitialized = true;
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * window.devicePixelRatio;
+      canvas.height = rect.height * window.devicePixelRatio;
+
+      const img = document.getElementById('fpCvr');
+      if (img) {
+        const imgRect = img.getBoundingClientRect();
+        fixedRadius = (imgRect.width / 2) * window.devicePixelRatio;
+      } else {
+        fixedRadius = canvas.width / 4;
+      }
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    function draw() {
+      requestAnimationFrame(draw);
+
+      if (!window.play) { 
+        for (let i = 0; i < dataArray.length; i++) {
+          dataArray[i] = Math.max(0, dataArray[i] - 7); 
+        }
+      } else {
+        analyser.getByteFrequencyData(dataArray);
+        spectrumRotation += 0.003; 
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = fixedRadius; 
+
+      const usefulBars = window.visSettings.bars; 
+      const step = Math.PI / (usefulBars - 1);
+      const maxBarHeight = radius * 0.45; 
+
+      let bassSum = 0;
+      for (let k = 0; k < 4; k++) bassSum += dataArray[k];
+      let bassPulse = (bassSum / 4) / 255; 
+
+      for (let i = 0; i < usefulBars; i++) {
+        let t = i / (usefulBars - 1);
+        
+        let logIndex = Math.floor(Math.pow(t, 1.4) * 88);
+        logIndex = Math.min(90, Math.max(0, logIndex));
+
+        let sum = 0;
+        let count = 0;
+        for (let j = -2; j <= 2; j++) {
+          let tIdx = logIndex + j;
+          if (tIdx >= 0 && tIdx < bufferLength) {
+            sum += dataArray[tIdx];
+            count++;
+          }
+        }
+        let smoothedValue = count > 0 ? sum / count : 0;
+        let intensity = Math.pow(smoothedValue / 255, 1.3);
+
+        let finalHeight = (intensity * 0.88 + bassPulse * 0.12) * maxBarHeight * window.visSettings.amp;
+        finalHeight = Math.max(2.5 * window.devicePixelRatio, finalHeight);
+
+        const angleRight = (Math.PI / 2) - (i * step) + spectrumRotation;
+        const angleLeft = (Math.PI / 2) + (i * step) + spectrumRotation;
+
+        function drawBar(angle) {
+          const startX = centerX + Math.cos(angle) * radius;
+          const startY = centerY + Math.sin(angle) * radius;
+          const endX = centerX + Math.cos(angle) * (radius + finalHeight);
+          const endY = centerY + Math.sin(angle) * (radius + finalHeight);
+
+          ctx.beginPath();
+          ctx.moveTo(startX, startY);
+          ctx.lineTo(endX, endY);
+          
+          ctx.lineWidth = 3.2 * window.devicePixelRatio; 
+          ctx.lineCap = 'round'; 
+
+          let hue, lightness;
+          const theme = window.visSettings.theme;
+          if (theme === 'netease') {
+             hue = 345 - (t * 135); 
+             lightness = 55 + (intensity * 15);
+             ctx.strokeStyle = `hsl(${hue}, 90%, ${lightness}%)`;
+          } else if (theme === 'cyber') {
+             hue = 280 + (t * 60); 
+             lightness = 60 + (intensity * 20);
+             ctx.strokeStyle = `hsl(${hue}, 100%, ${lightness}%)`;
+          } else if (theme === 'gold') {
+             hue = 45 + (t * 15); 
+             lightness = 40 + (intensity * 35);
+             ctx.strokeStyle = `hsl(${hue}, 95%, ${lightness}%)`;
+          } else if (theme === 'neon') {
+             hue = 150 + (t * 70); 
+             lightness = 50 + (intensity * 25);
+             ctx.strokeStyle = `hsl(${hue}, 100%, ${lightness}%)`;
+          }
+
+          ctx.stroke();
+        }
+
+        drawBar(angleRight);
+        drawBar(angleLeft);
+      }
+    }
+
+    draw();
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    // 页面加载完成后，立刻将读取到的本地数据同步应用到 HTML 控件中
+    window.syncVisSettingsToUI(); 
+
+    const ae = document.getElementById('aPlayer');
+    if (ae) {
+      ae.addEventListener('play', () => {
+        if (audioContext && audioContext.state === 'suspended') {
+          audioContext.resume();
+        }
+        initVisualizer();
+      });
+    }
+  });
+})();

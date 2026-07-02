@@ -11,7 +11,6 @@
 <div id="bg-overlay"></div>
 <div id="bg-mask"></div>
 
-<!-- ================= 侧栏与顶栏 ================= -->
 <aside class="sidebar">
   <div class="sidebar-header"><span class="logo-text">超级播放器</span></div>
   <nav class="sidebar-menu">
@@ -40,7 +39,6 @@
   <div class="topbar"><span id="pgTitle">主页</span></div>
   <div class="body">
 
-    <!-- ================= 1. 主页 ================= -->
     <div class="pg active" id="pgHome">
       <div class="top-status" id="topStatus">
         <img id="statusCover" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23151520' rx='10'/%3E%3Ccircle cx='100' cy='85' r='32' fill='none' stroke='rgba(243,18,96,0.3)' stroke-width='2.5'/%3E%3Cpolygon points='90,73 90,97 114,85' fill='rgba(243,18,96,0.35)'/%3E%3Ctext x='100' y='148' text-anchor='middle' font-family='sans-serif' font-size='12' fill='rgba(255,255,255,0.18)'%3E暂无封面%3C/text%3E%3C/svg%3E" alt="封面" onerror="imgFallback(this)" onclick="tFull()" />
@@ -54,7 +52,6 @@
         </div>
       </div>
       <div class="grid-2">
-        <!-- 卡片1：系统状态 -->
         <div class="card collapsible-card collapsed">
           <div class="card-header collapsible-trigger" onclick="toggleCollapse(this)">
             <span><i class="fas fa-circle" style="font-size:7px;color:#4ade80"></i> 系统状态</span>
@@ -66,8 +63,7 @@
             <div class="ir"><span class="l">服务器</span><span class="v">Node.js Express</span></div>
           </div>
         </div>
-         <!-- 卡片2：视觉设置 -->
-        <div class="card full-w collapsible-card collapsed">
+         <div class="card full-w collapsible-card collapsed">
           <div class="card-header collapsible-trigger" onclick="toggleCollapse(this)">
             <span><i class="fas fa-palette"></i> 个性化视觉设置</span>
             <span class="collapse-arrow"><i class="fas fa-chevron-down"></i></span>
@@ -137,6 +133,56 @@
                 <span id="fpOpacityVal" style="font-size:12px; color:var(--text-secondary); min-width:30px; text-align:right;">60%</span>
               </div>
             </div>
+            
+            <div class="cg" style="justify-content: space-between; width: 100%; margin-top: 10px; border-top:1px solid var(--glass-border); padding-top:10px;">
+              <div style="display:flex; flex-direction:column; gap:4px;">
+                <span style="font-size:13px; font-weight:600; color:var(--text-main);">频谱颜色</span>
+                <span style="font-size:11px; color:var(--text-secondary);">选择频谱主题颜色</span>
+              </div>
+              <select id="visThemeSel" onchange="updateVisSettings()" style="padding:6px 12px; border-radius:var(--radius); border:1px solid var(--glass-border); background:rgba(30,30,50,0.6); color:#fff; cursor:pointer;">
+                <option value="netease" selected>网易红</option>
+                <option value="cyber">赛博朋克 (紫粉)</option>
+                <option value="gold">黑金 (暗金)</option>
+                <option value="neon">荧光 (绿蓝)</option>
+              </select>
+            </div>
+
+            <div class="cg" style="justify-content: space-between; width: 100%; margin-top: 10px;">
+              <div style="display:flex; flex-direction:column; gap:4px;">
+                <span style="font-size:13px; font-weight:600; color:var(--text-main);">高度跳动幅度</span>
+                <span style="font-size:11px; color:var(--text-secondary);">调整频谱条的跳动幅度大小</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="range" id="visAmpRange" min="0.5" max="3.5" step="0.1" value="1.8" oninput="updateVisSettings()" style="width:110px; accent-color:var(--primary);" />
+                <span id="visAmpVal" style="font-size:12px; color:var(--text-secondary); min-width:30px; text-align:right;">1.8x</span>
+              </div>
+            </div>
+
+            <div class="cg" style="justify-content: space-between; width: 100%; margin-top: 10px;">
+              <div style="display:flex; flex-direction:column; gap:4px;">
+                <span style="font-size:13px; font-weight:600; color:var(--text-main);">物理平滑度</span>
+                <span style="font-size:11px; color:var(--text-secondary);">越小平滑度越低，跳动越快</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="range" id="visSmoothRange" min="0.3" max="0.95" step="0.05" value="0.75" oninput="updateVisSettings()" style="width:110px; accent-color:var(--primary);" />
+                <span id="visSmoothVal" style="font-size:12px; color:var(--text-secondary); min-width:30px; text-align:right;">0.75</span>
+              </div>
+            </div>
+
+            <div class="cg" style="justify-content: space-between; width: 100%; margin-top: 10px;">
+              <div style="display:flex; flex-direction:column; gap:4px;">
+                <span style="font-size:13px; font-weight:600; color:var(--text-main);">线条数量</span>
+                <span style="font-size:11px; color:var(--text-secondary);">调整一侧渲染的频谱条数量</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="range" id="visBarsRange" min="40" max="120" step="4" value="76" oninput="updateVisSettings()" style="width:110px; accent-color:var(--primary);" />
+                <span id="visBarsVal" style="font-size:12px; color:var(--text-secondary); min-width:30px; text-align:right;">76根</span>
+              </div>
+            </div>
+
+            <div class="cg" style="justify-content: flex-end; width: 100%; margin-top: 14px;">
+              <button class="btn btn-o" onclick="resetVisPreset()" style="font-size:12px; padding:6px 14px;"><i class="fas fa-magic"></i> 重置频谱参数</button>
+            </div>
             <div class="cg" style="justify-content: space-between; width: 100%; margin-top: 10px; border-top:1px solid var(--glass-border); padding-top:10px;">
               <div style="display:flex; flex-direction:column; gap:4px; max-width: 70%">
                 <span style="font-size:13px; font-weight:600; color:var(--text-main);">本地壁纸状态</span>
@@ -147,7 +193,6 @@
           </div>
         </div>
       </div>
-        <!-- 卡片4: 关于本站 -->
         <div class="card full-w">
           <div class="ct"><i class="fas fa-info-circle"></i> 关于本站</div>
           <div class="ir"><span class="l">站点名称</span><span class="v">超级播放器 Pro Max Ultra</span></div>
@@ -155,7 +200,6 @@
           <div class="ir"><span class="l">API 地址</span><span class="v">http://nekoh2o.top:3000</span></div>
           <div class="ir"><span class="l">功能</span><span class="v">在线搜歌 · 高音质 · 滚动歌词 · 全屏</span></div>
         </div>
-        <!-- 卡片5: 快捷操作 -->
         <div class="card full-w">
           <div class="ct"><i class="fas fa-bolt"></i> 快捷操作</div>
           <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
@@ -163,10 +207,7 @@
             <button class="btn btn-o" onclick="window.open('http://nekoh2o.top:3000')"><i class="fas fa-book" style="margin-right:6px"></i>API 文档</button>
           </div>
         </div>
-      </div> <!-- /grid-2 彻底闭合 -->
-
-      <!-- 卡片6: Cookie 管理 -->
-      <div class="card full-w" style="margin-top: 14px;">
+      </div> <div class="card full-w" style="margin-top: 14px;">
         <div class="ct"><i class="fas fa-cookie-bite" style="margin-right:6px"></i> Cookie 管理</div>
         <div class="ci">
           <div class="cg">
@@ -183,11 +224,7 @@
           </div>
         </div>
       </div>
-    </div> <!-- /pgHome 主页彻底闭合 -->
-
-
-    <!-- ================= 2. 我的 ================= -->
-    <div class="pg" id="pgMine">
+    </div> <div class="pg" id="pgMine">
       <div class="card full-w" style="margin-bottom:18px; display:flex; align-items:center; gap:16px;">
         <i class="fas fa-user-circle" style="font-size: 52px; color: var(--text-secondary); opacity: 0.8;"></i>
         <div style="flex:1;">
@@ -204,11 +241,7 @@
       <div id="mineHistory" class="s-list"></div>
       <div id="mineFavorites" class="s-list" style="display:none;"></div>
       <div id="minePlaylists" class="s-list" style="display:none;"></div>
-    </div> <!-- /pgMine 彻底闭合 -->
-
-
-    <!-- ================= 3. 音乐 ================= -->
-    <div class="pg" id="pgMusic">
+    </div> <div class="pg" id="pgMusic">
       <div class="s-tabs">
         <button class="active" onclick="setSType(1,this)" data-type="1">歌曲</button>
         <button onclick="setSType(100,this)" data-type="100">歌手</button>
@@ -232,11 +265,7 @@
         <div class="st">搜索结果 <span style="font-size:12px;color:var(--text-secondary);font-weight:400" id="resCnt"></span></div>
         <div class="s-list" id="resGrid"></div>
       </div>
-    </div> <!-- /pgMusic 彻底闭合 -->
-
-
-    <!-- ================= 4. 视频 ================= -->
-    <div class="pg" id="pgBilibili">
+    </div> <div class="pg" id="pgBilibili">
       <div class="sbar">
         <input type="text" id="biIpt" placeholder="搜索视频、UP主..." style="flex:1;min-width:150px" />
         <button class="btn" id="biBtn"><i class="fas fa-search"></i></button>
@@ -249,15 +278,7 @@
         <div class="st">搜索结果 <span style="font-size:12px;color:var(--text-secondary);font-weight:400" id="biCnt"></span></div>
         <div class="sg" id="biResGrid"></div>
       </div>
-    </div> <!-- /pgBilibili 彻底闭合 -->
-
-  </div> <!-- ==== /body 全局容器彻底闭合 ==== -->
-
-
-  <!-- ================= 5. 全局组件 (悬浮栏 / 弹窗) ================= -->
-
-  <!-- 悬浮播放栏 -->
-  <div class="pbar" id="pBar">
+    </div> </div> <div class="pbar" id="pBar">
     <div class="prb" onclick="seek(event)" ontouchstart="seek(event)"><div class="prf" id="prgF"></div></div>
     <img class="pc" id="pCvr" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23151520' rx='10'/%3E%3Ccircle cx='100' cy='85' r='32' fill='none' stroke='rgba(243,18,96,0.3)' stroke-width='2.5'/%3E%3Cpolygon points='90,73 90,97 114,85' fill='rgba(243,18,96,0.35)'/%3E%3Ctext x='100' y='148' text-anchor='middle' font-family='sans-serif' font-size='12' fill='rgba(255,255,255,0.18)'%3E暂无封面%3C/text%3E%3C/svg%3E" alt="封面" onerror="imgFallback(this)" onclick="tFull()" />
     <div class="pi" onclick="tFull()">
@@ -274,7 +295,6 @@
       <button class="pb1" onclick="tPlay()"><i class="fas fa-play" id="pIcn"></i></button>
       <button onclick="next()" title="下一首"><i class="fas fa-step-forward"></i></button>
     </div>
-    <!-- 播放模式切换和定时关闭按钮 -->
     <div class="px">
       <button id="modeBtn" onclick="togglePlayMode()" title="列表循环"><i class="fas fa-retweet"></i></button>
       <button onclick="showSleepTimerModal()" title="定时关闭"><i class="fas fa-clock"></i></button>
@@ -283,14 +303,15 @@
     </div>
   </div>
 
-  <!-- 全屏播放器 -->
   <div class="fp" id="fullP">
     <button class="fc1" onclick="tFull()"><i class="fas fa-times"></i></button>
-    <!-- 沉浸式全屏/退出全屏按钮 -->
     <button onclick="toggleNativeFs()" style="position:absolute; top:20px; right:65px; width:40px; height:40px; border-radius:50%; background:rgba(0,0,0,0.2); border:none; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:10;"><i class="fas fa-expand" id="nativeFsIcon"></i></button>
-    
+  
+  <div class="fp-cover-wrap" style="position: relative; display: flex; align-items: center; justify-content: center;">  
     <img id="fpCvr" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%23151520' rx='20'/%3E%3Ccircle cx='200' cy='175' r='70' fill='none' stroke='rgba(243,18,96,0.3)' stroke-width='5'/%3E%3Cpolygon points='180,150 180,200 230,175' fill='rgba(243,18,96,0.35)'/%3E%3Ctext x='200' y='300' text-anchor='middle' font-family='sans-serif' font-size='24' fill='rgba(255,255,255,0.18)'%3E暂无封面%3C/text%3E%3C/svg%3E" alt="封面" onerror="imgFallback(this)" />
-    <div class="ft" id="fpTtl">未播放</div>
+  <canvas id="visualizerCanvas" style="position: absolute; width: 200%; height: 200%; pointer-events: none; z-index: -1;"></canvas>
+</div>
+   <div class="ft" id="fpTtl">未播放</div>
     <div class="fa" id="fpArt">-</div>
     <div class="fpr">
       <span class="t" id="fpCurT">00:00</span>
@@ -298,7 +319,6 @@
       <span class="t" id="fpDur">00:00</span>
     </div>
     <div class="lc" id="lyrBox"><ul id="lyrUl"></ul></div>
-    <!-- 播放模式与播放列表快捷按钮 -->
     <div class="fc">
       <button id="fpModeBtn" onclick="togglePlayMode()" title="列表循环"><i class="fas fa-retweet"></i></button>
       <button onclick="prev()"><i class="fas fa-step-backward"></i></button>
@@ -308,7 +328,6 @@
     </div>
   </div>
 
-  <!-- 专属播放列表 Modal -->
   <div class="modal" id="plModal" onclick="if(event.target===this)hdPL()">
     <div class="mc">
       <h2><span><i class="fas fa-list" style="color:var(--primary);margin-right:8px"></i>当前播放列表</span><button class="close" onclick="hdPL()"><i class="fas fa-times"></i></button></h2>
@@ -317,7 +336,6 @@
     </div>
   </div>
 
-  <!-- 添加到歌单模态框 -->
   <div class="modal" id="addPlModal" onclick="if(event.target===this)this.classList.remove('show')">
     <div class="mc">
       <h2><span><i class="fas fa-folder-plus" style="color:var(--primary);margin-right:8px"></i>加入到播放列表...</span><button class="close" onclick="document.getElementById('addPlModal').classList.remove('show')"><i class="fas fa-times"></i></button></h2>
@@ -325,7 +343,6 @@
     </div>
   </div>
 
-  <!-- 自定义歌单管理及播放 Modal -->
   <div class="modal" id="customPlModal" onclick="if(event.target===this)this.classList.remove('show')">
     <div class="mc">
       <h2><span id="cPlTitle"><i class="fas fa-list" style="color:var(--primary);margin-right:8px"></i>自定义歌单</span><button class="close" onclick="document.getElementById('customPlModal').classList.remove('show')"><i class="fas fa-times"></i></button></h2>
@@ -333,7 +350,6 @@
     </div>
   </div>
 
-  <!-- 登录模态框 -->
   <div class="modal" id="qrModal" onclick="if(event.target===this)closeQR()">
     <div class="mc">
       <h2><span><i class="fas fa-qrcode" style="color:var(--primary);margin-right:8px"></i>网易云扫码登录</span><button class="close" onclick="closeQR()"><i class="fas fa-times"></i></button></h2>
@@ -344,7 +360,6 @@
     </div>
   </div>
 
-  <!-- 更新日志模态框 -->
   <div class="modal" id="clModal" onclick="if(event.target===this)hdCL()">
     <div class="mc">
       <h2><span><i class="fas fa-history" style="color:var(--primary);margin-right:8px"></i>更新日志</span><button class="close" onclick="hdCL()"><i class="fas fa-times"></i></button></h2>
@@ -352,7 +367,6 @@
     </div>
   </div>
 
-  <!-- ★修改点3: 定时关闭模态框 -->
   <div class="modal" id="timerModal" onclick="if(event.target===this)this.classList.remove('show')">
     <div class="mc">
       <h2><span><i class="fas fa-clock" style="color:var(--primary);margin-right:8px"></i>定时关闭</span><button class="close" onclick="document.getElementById('timerModal').classList.remove('show')"><i class="fas fa-times"></i></button></h2>
@@ -367,7 +381,7 @@
     </div>
   </div>
 
-  <audio id="aPlayer" style="display:none"></audio>
+  <audio id="aPlayer" crossorigin="anonymous" style="display:none"></audio>
 </main>
 
 <script type="module" src="/src/main.js"></script>
