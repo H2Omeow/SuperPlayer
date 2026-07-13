@@ -4,23 +4,12 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': {
-        target: 'http://localhost:4096',
-        changeOrigin: true,
-      },
-      '/data/wallpaper': {
-        target: 'http://localhost:4096',
-        changeOrigin: true,
-      },
+      '/api': { target: 'http://localhost:4096', changeOrigin: true },
+      '/auth': { target: 'http://localhost:4096', changeOrigin: true },
+      '/user': { target: 'http://localhost:4096', changeOrigin: true },
+      '/data/wallpaper': { target: 'http://localhost:4096', changeOrigin: true },
     },
   },
-  build: {
-    outDir: 'dist',
-    emptyOutDir: true,
-  },
-  resolve: {
-    alias: {
-      '@': '/src',
-    },
-  },
+  build: { outDir: 'dist', emptyOutDir: true },
+  resolve: { alias: { '@': '/src' } },
 });

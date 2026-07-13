@@ -2,6 +2,8 @@
 // ==================== 全局状态变量 ====================
 window.API = '/api';
 window.BAPI = 'http://nekoh2o.top:3002';
+window.USERAPI = '/user';    // 加密播放数据（走 4096 后端）
+window.currentUser = null;
 
 window.ncKey = 'napcat_nc_cookie';
 window.blKey = 'napcat_bl_cookie';

@@ -1,7 +1,8 @@
 // ==================== DOMContentLoaded 初始化 ====================
 window.addEventListener('DOMContentLoaded', function() {
-  // 1. 安全执行所有核心模块初始化
+  // 1. 安全执行所有核心模块初始化	
   try { window.initGuestCookie(); } catch(e) { console.error('Guest load error:', e); }
+  try { window.initAuth(); } catch(e) { console.error('Auth init error:', e); }
   try { window.loadCookies(); } catch(e) { console.error('Cookies load error:', e); }
   try { window.chkAPI(); } catch(e) { console.error('API check error:', e); }
   try { window.initBg(); } catch(e) { console.error('Wallpaper init error:', e); }

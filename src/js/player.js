@@ -573,6 +573,7 @@ window.addToHistory = function(song) {
   window.playHistory.unshift(song);
   if(window.playHistory.length > 100) window.playHistory.pop();
   localStorage.setItem('my_history', JSON.stringify(window.playHistory));
+  if (window.pushUserData) window.pushUserData();
 };
 
 // ==================== 收藏功能 ====================
@@ -592,6 +593,7 @@ window.favSong = function(id, nm, ar, pc, btn) {
     btn.querySelector('i').style.color = 'var(--primary)';
   }
   localStorage.setItem('my_favorites', JSON.stringify(window.myFavorites));
+  if (window.pushUserData) window.pushUserData();
   if(document.getElementById('mineFavorites').style.display !== 'none') {
     window.renderMineFavorites();
   }
@@ -646,6 +648,7 @@ window.createNewPl = function() {
 
 window.saveCustomPl = function() {
   localStorage.setItem('my_playlists', JSON.stringify(window.customPlaylists));
+  if (window.pushUserData) window.pushUserData();
 };
 
 // ==================== 自定义歌单管理 ====================

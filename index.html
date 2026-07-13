@@ -225,14 +225,7 @@
         </div>
       </div>
     </div> <div class="pg" id="pgMine">
-      <div class="card full-w" style="margin-bottom:18px; display:flex; align-items:center; gap:16px;">
-        <i class="fas fa-user-circle" style="font-size: 52px; color: var(--text-secondary); opacity: 0.8;"></i>
-        <div style="flex:1;">
-          <div style="font-size:18px; font-weight:bold; color: var(--text-main);">未登录用户</div>
-          <div style="font-size:12px; color:var(--text-secondary); margin-top: 5px;">登录以同步多端数据及云端歌单</div>
-        </div>
-        <button class="btn btn-o" onclick="toast('🔧系统维护中，暂未开启...')">前往登录</button>
-      </div>
+      <div class="card full-w" id="userCard" style="margin-bottom:18px; display:flex; align-items:center; gap:16px;"></div>
       <div class="mine-tabs" id="mineTabs">
         <button class="active" onclick="setMineTab('history', this)"><i class="fas fa-history" style="margin-right:6px"></i>播放记录</button>
         <button onclick="setMineTab('favorites', this)"><i class="fas fa-heart" style="margin-right:6px"></i>我的收藏</button>
