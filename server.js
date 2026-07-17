@@ -49,7 +49,6 @@ app.use(session({
 }));
 
 // ==================== 播放数据静态加密 (AES-256-GCM，每用户独立密钥) ====================
-// 密钥 = HKDF(主密钥, salt=用户id)，与登录密码无关，改密/重置密码不影响
 function deriveKey(userId) {
     const master = Buffer.from(process.env.DATA_ENC_KEY, 'hex');
     return Buffer.from(crypto.hkdfSync('sha256', master, Buffer.from(String(userId)), Buffer.from('playerdata'), 32));
@@ -78,11 +77,13 @@ function userFile(id) { return path.join(userDataDir, safeId(id) + '.enc'); }
 function readUserData(id) {
     try {
         const f = userFile(id);
-        if (!fs.existsSync(f)) return { history: [], favorites: [], playlists: [] };
-        return JSON.parse(decryptData(id, fs.readFileSync(f, 'utf8')));
+        if (!fs.existsSync(f)) return { history: [], favorites: [], playlists: [], ncCookie: '' };
+        const data = JSON.parse(decryptData(id, fs.readFileSync(f, 'utf8')));
+        if (typeof data.ncCookie !== 'string') data.ncCookie = '';
+        return data;
     } catch (e) {
         console.warn('[数据] 读取失败:', e.message);
-        return { history: [], favorites: [], playlists: [] };
+        return { history: [], favorites: [], playlists: [], ncCookie: '' };
     }
 }
 function writeUserData(id, obj) {
@@ -90,12 +91,33 @@ function writeUserData(id, obj) {
     catch (e) { console.error('[数据] 写入失败:', e.message); }
 }
 
+// ==================== 统一鉴权：网页用 session，App 用 Bearer token ====================
+function resolveUser(req) {
+    // 网页：express-session
+    if (req.session && req.session.user) {
+        return { user: req.session.user, ssoToken: req.session.ssoToken };
+    }
+    // App：Authorization: Bearer <ssoToken>
+    const auth = req.headers.authorization || '';
+    if (auth.startsWith('Bearer ')) {
+        const token = auth.slice(7);
+        try {
+            const payload = jwt.verify(token, process.env.JWT_SECRET);
+            return {
+                user: { id: payload.id, username: payload.username, email: payload.email },
+                ssoToken: token
+            };
+        } catch (e) { return null; }
+    }
+    return null;
+}
+
 // ==================== 壁纸缓存与尺寸计算系统 ====================
 const wallpapers = { horizontal: [], vertical: [] };
 let wallpaperPath = '/data/wallpaper';
 
 if (!fs.existsSync(wallpaperPath)) {
-    wallpaperPath = path.join(__dirname, 'data/wallpaper'); // 兼容本地测试
+    wallpaperPath = path.join(__dirname, 'data/wallpaper');
 }
 console.log(`[壁纸模块] 正在从物理路径加载壁纸: ${wallpaperPath}`);
 
@@ -141,7 +163,6 @@ const staticDir = fs.existsSync(path.join(__dirname, 'dist'))
 app.use(express.static(staticDir));
 
 // ==================== SSO 单点登录路由 ====================
-// 回跳校验：中心 302 带 ?token 回到这里，验签成功后建立本站会话，再重定向抹掉地址栏 token
 app.get('/auth/sso/callback', async (req, res) => {
     const token = req.query.token;
     if (!token) return res.status(400).send('缺少登录凭证');
@@ -149,60 +170,69 @@ app.get('/auth/sso/callback', async (req, res) => {
         const payload = jwt.verify(token, process.env.JWT_SECRET);
         req.session.user = { id: payload.id, username: payload.username, email: payload.email };
         req.session.ssoToken = token;
-        // 尝试拉取完整资料填充会话（失败不影响登录）
         try {
             const r = await fetch(ACCOUNT_CENTER + '/api/userinfo', { headers: { Authorization: 'Bearer ' + token } });
             const data = await r.json();
             if (data.code === 0) req.session.user = data.user;
-        } catch (e) { /* 忽略，保留基础资料 */ }
+        } catch (e) { /* 忽略 */ }
+        // 给原生 App 一份可读的 token（非 HttpOnly），网页端忽略
+        res.cookie('app_token', token, {
+            httpOnly: false,
+            secure: process.env.COOKIE_SECURE === 'true',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 3600 * 1000
+        });
         req.session.save(() => res.redirect('/'));
     } catch (e) {
         res.status(401).send('登录凭证无效或已过期，请重新登录');
     }
 });
 
-// 当前用户完整资料（后端代理中心 /api/userinfo，实时）
 app.get('/auth/sso/me', async (req, res) => {
-    if (!req.session || !req.session.user) return res.status(401).json({ code: 401, msg: '未登录' });
+    const ctx = resolveUser(req);
+    if (!ctx) return res.status(401).json({ code: 401, msg: '未登录' });
     try {
-        const r = await fetch(ACCOUNT_CENTER + '/api/userinfo', { headers: { Authorization: 'Bearer ' + req.session.ssoToken } });
+        const r = await fetch(ACCOUNT_CENTER + '/api/userinfo', { headers: { Authorization: 'Bearer ' + ctx.ssoToken } });
         const data = await r.json();
         if (data.code === 0) {
-            req.session.user = data.user;
+            if (req.session) req.session.user = data.user;
             return res.json({ code: 0, user: data.user });
         }
         if (data.code === 401) {
-            req.session.destroy(() => {});
+            if (req.session) req.session.destroy(() => {});
             return res.status(401).json({ code: 401, msg: '登录已过期' });
         }
-        return res.json({ code: 0, user: req.session.user }); // 降级返回缓存
+        return res.json({ code: 0, user: ctx.user });
     } catch (e) {
-        return res.json({ code: 0, user: req.session.user }); // 中心不可达时降级
+        return res.json({ code: 0, user: ctx.user });
     }
 });
 
-// 退出：仅清本站会话（前端随后再跳中心 /logout）
 app.post('/auth/sso/logout', (req, res) => {
     if (req.session) req.session.destroy(() => {});
     res.clearCookie('sp.sid');
+    res.clearCookie('app_token');
     res.json({ code: 0 });
 });
 
 // ==================== 用户播放数据（加密存储，需登录） ====================
 app.get('/user/data', (req, res) => {
-    if (!req.session || !req.session.user) return res.status(401).json({ code: 401, msg: '未登录' });
-    res.json({ code: 0, data: readUserData(req.session.user.id) });
+    const ctx = resolveUser(req);
+    if (!ctx) return res.status(401).json({ code: 401, msg: '未登录' });
+    res.json({ code: 0, data: readUserData(ctx.user.id) });
 });
 
 app.put('/user/data', express.json({ limit: '8mb' }), (req, res) => {
-    if (!req.session || !req.session.user) return res.status(401).json({ code: 401, msg: '未登录' });
+    const ctx = resolveUser(req);
+    if (!ctx) return res.status(401).json({ code: 401, msg: '未登录' });
     const body = req.body || {};
     const clean = {
         history: Array.isArray(body.history) ? body.history.slice(0, 100) : [],
         favorites: Array.isArray(body.favorites) ? body.favorites : [],
-        playlists: Array.isArray(body.playlists) ? body.playlists : []
+        playlists: Array.isArray(body.playlists) ? body.playlists : [],
+        ncCookie: typeof body.ncCookie === 'string' ? body.ncCookie : ''
     };
-    writeUserData(req.session.user.id, clean);
+    writeUserData(ctx.user.id, clean);
     res.json({ code: 0 });
 });
 
