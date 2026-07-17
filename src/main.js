@@ -6,8 +6,9 @@ import './css/main.css';
 import './js/state.js';    // 全局状态变量（无依赖）
 import './js/core.js';     // 核心工具函数（依赖 state）
 import './js/ui.js';       // UI 函数（依赖 state, core）
-import './js/auth.js';    // SSO 登录 / 数据同步（依赖 state, core, ui）
+import './js/auth.js';     // SSO 登录 / 数据同步（依赖 state, core, ui）
 import './js/theme.js';    // 主题/壁纸函数（依赖 state）
 import './js/api.js';      // 搜索/API 函数（依赖 state, core, ui）
 import './js/player.js';   // 播放器函数（依赖 state, core, ui）
+import './js/cache.js';    // 音乐缓存与播放全部功能（依赖 player）
 import './js/init.js';     // DOM 初始化（依赖所有模块）
