@@ -11,4 +11,5 @@ import './js/theme.js';    // 主题/壁纸函数（依赖 state）
 import './js/api.js';      // 搜索/API 函数（依赖 state, core, ui）
 import './js/player.js';   // 播放器函数（依赖 state, core, ui）
 import './js/cache.js';    // 音乐缓存与播放全部功能（依赖 player）
+import './js/feature-fixes.js'; // 缓存跨域、搜索、Cookie 同步及响应式兼容修复
 import './js/init.js';     // DOM 初始化（依赖所有模块）
